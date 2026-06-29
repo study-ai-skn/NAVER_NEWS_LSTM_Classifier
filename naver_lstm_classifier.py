@@ -48,6 +48,7 @@ if __name__ == "__main__":
         help="학습할 모델 유형 (기본: 전부)",
     )
     parser.add_argument("--n_trials", type=int, default=30, help="Optuna trial 수")
+    parser.add_argument("--max-items", type=int, default=300, help="카테고리당 크롤링 건수 (기본 300)")
     parser.add_argument("--skip-tuning", action="store_true",
                         help="Optuna 탐색 건너뛰고 최신 best_configs.json 으로 바로 학습")
     parser.add_argument("--epochs", type=int, default=None, help="학습 epoch 수 (기본: config 값 사용)")
@@ -89,6 +90,7 @@ if __name__ == "__main__":
             n_trials=args.n_trials,
             save_dir=str(run_dir),
             model_types=args.models,
+            max_items=args.max_items,
         )
 
     # ── 2. 최적 파라미터로 학습 ───────────────────────────────────────────────
@@ -127,3 +129,8 @@ if __name__ == "__main__":
         print(f"  {mt:12s}: {acc:.4f}  {bar}")
     print(f"\n  산출물 위치: {run_dir}")
     print(f"{'='*60}\n")
+
+    # 결과 저장 (run_v6.py 가 읽어서 리포트 자동 생성)
+    results_path = run_dir / "results.json"
+    with open(results_path, "w", encoding="utf-8") as f:
+        json.dump({"version": run_dir.name, "results": results}, f, ensure_ascii=False, indent=2)

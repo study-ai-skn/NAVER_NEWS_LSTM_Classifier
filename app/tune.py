@@ -313,7 +313,7 @@ def _params_to_config(params: dict) -> Config:
             weight_decay   = params.get("lstm_weight_decay",   0.0),
             learning_rate  = params.get("lstm_lr",            0.001),
             batch_size     = params.get("lstm_batch_size",      16),
-            max_items      = 300,
+            max_items      = params.get("_max_items",           300),
         )
     else:
         return Config(
@@ -331,6 +331,7 @@ def run_tuning(
     n_trials: int = 30,
     save_dir: str | None = None,
     model_types: List[str] | None = None,
+    max_items: int = 300,
 ) -> Dict[str, Config]:
     """Optuna 하이퍼파라미터 튜닝을 실행하고 최적 Config 를 반환한다.
 
@@ -347,7 +348,7 @@ def run_tuning(
     print(f"{'='*60}\n")
 
     config_base   = Config()
-    raw_texts, labels = load_sample_data(max_items=300)
+    raw_texts, labels = load_sample_data(max_items=max_items)
 
     print("KoNLPy 형태소 분석 중 (LSTM trial 용, 최초 1회)...")
     cleaned_texts = [clean_text(t) for t in raw_texts]
@@ -413,6 +414,8 @@ def run_tuning(
             continue
         best_trial       = max(type_trials, key=lambda t: t.value)
         cfg              = _params_to_config(best_trial.params)
+        if mt == "LSTM":
+            cfg.max_items = max_items   # 튜닝에 사용한 데이터 크기 보존
         best_configs[mt] = cfg
         print(f"  [{mt}] 최고 val_acc = {best_trial.value:.4f}  →  {best_trial.params}")
 

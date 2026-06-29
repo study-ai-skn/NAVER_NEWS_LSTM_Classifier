@@ -403,12 +403,18 @@ def train_model(config: Config):
             all_targets.extend(batch_y.tolist())
 
     accuracy = accuracy_score(all_targets, all_preds)
+    target_names = [id_to_label[i] for i in range(len(id_to_label))]
     print(f"\n테스트 정확도: {accuracy:.4f}  [{config.model_type}]")
-    print(classification_report(
-        all_targets, all_preds,
-        target_names=[id_to_label[i] for i in range(len(id_to_label))],
-        zero_division=0,
-    ))
+    print(classification_report(all_targets, all_preds, target_names=target_names, zero_division=0))
+
+    clf_report = classification_report(
+        all_targets, all_preds, target_names=target_names,
+        zero_division=0, output_dict=True,
+    )
+    import json as _json
+    report_path = os.path.join(save_dir, f"classification_report_{config.model_type.lower()}.json")
+    with open(report_path, "w", encoding="utf-8") as f:
+        _json.dump({"accuracy": accuracy, "report": clf_report}, f, ensure_ascii=False, indent=2)
 
     _plot_history(train_losses, val_losses, train_accs, val_accs, lr_history, save_dir)
     _plot_confusion_matrix(all_targets, all_preds, id_to_label, save_dir)
@@ -423,4 +429,4 @@ def train_model(config: Config):
     with open(meta_path, "wb") as f:
         pickle.dump(meta, f)
 
-    return model, {**meta, "accuracy": accuracy}
+    return model, {**meta, "accuracy": accuracy, "clf_report": clf_report}
