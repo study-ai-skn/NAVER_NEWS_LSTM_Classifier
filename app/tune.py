@@ -92,6 +92,7 @@ def objective(
     labels: List[str],
     config_base: Config,
     tokenizer_cache: dict,
+    model_types: List[str],
 ) -> float:
     """Optuna 목적 함수 — 검증 정확도를 반환한다 (방향: maximize).
 
@@ -99,7 +100,7 @@ def objective(
     각 모델에 맞는 하이퍼파라미터를 탐색한다.
     """
     # ── 공통 파라미터 ─────────────────────────────────────────────────────────
-    model_type = trial.suggest_categorical("model_type", ["LSTM", "KoBERT", "KoELECTRA"])
+    model_type = trial.suggest_categorical("model_type", model_types)
     dropout    = trial.suggest_float("dropout", 0.1, 0.5, step=0.05)
 
     y, label_to_id, _ = encode_labels(labels)
@@ -318,16 +319,23 @@ def _params_to_config(params: dict) -> Config:
         )
 
 
-def run_tuning(n_trials: int = 30, save_dir: str | None = None) -> Dict[str, Config]:
+def run_tuning(
+    n_trials: int = 30,
+    save_dir: str | None = None,
+    model_types: List[str] | None = None,
+) -> Dict[str, Config]:
     """Optuna 하이퍼파라미터 튜닝을 실행하고 최적 Config 를 반환한다.
 
-    LSTM / KoBERT / KoELECTRA 세 모델 유형을 함께 탐색한다.
+    model_types 에 지정된 모델 유형만 탐색한다 (기본: 세 가지 모두).
     KoNLPy 형태소 분석은 한 번만 수행하고 LSTM trial 에서 공유한다.
     트랜스포머 토크나이저는 캐시로 공유한다.
     """
+    if model_types is None:
+        model_types = ["LSTM", "KoBERT", "KoELECTRA"]
+
     print(f"\n{'='*60}")
     print(f"  Optuna 하이퍼파라미터 튜닝 시작  (n_trials={n_trials})")
-    print(f"  탐색 모델: LSTM / KoBERT / KoELECTRA")
+    print(f"  탐색 모델: {' / '.join(model_types)}")
     print(f"{'='*60}\n")
 
     config_base   = Config()
@@ -359,7 +367,7 @@ def run_tuning(n_trials: int = 30, save_dir: str | None = None) -> Dict[str, Con
         )
 
     study.optimize(
-        lambda trial: objective(trial, raw_texts, cleaned_texts, labels, config_base, tokenizer_cache),
+        lambda trial: objective(trial, raw_texts, cleaned_texts, labels, config_base, tokenizer_cache, model_types),
         n_trials=n_trials,
         show_progress_bar=True,
         callbacks=[
