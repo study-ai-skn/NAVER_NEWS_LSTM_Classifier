@@ -37,37 +37,68 @@ def clean_text(text: str) -> str:
 
 
 def _extract_nouns(text: str) -> List[str]:
-    """텍스트에서 명사를 추출한다. KoNLPy 사용 불가 시 공백 기준으로 분리한다."""
+    """텍스트에서 명사만 추출한다. KoNLPy 사용 불가 시 공백 기준으로 분리한다."""
     if _USE_KONLPY:
         return _okt.nouns(text)
-    # fallback: 공백 분리 후 2글자 이상 한국어 단어만 사용
     return [w for w in text.split() if len(w) >= 2]
 
 
-def build_vocab(texts: List[str], max_vocab: int) -> Dict[str, int]:
-    """정제된 텍스트 목록에서 단어 사전을 구성한다."""
-    counter: Counter = Counter()
-    for text in texts:
-        nouns = _extract_nouns(text)
-        tokens = [n for n in nouns if n not in STOP_WORDS and len(n) >= 2]
-        counter.update(tokens)
+def _extract_morphemes(text: str) -> List[str]:
+    """명사 + 동사 + 형용사 + 부사를 추출한다 (명사만보다 더 많은 문맥 보존).
 
+    KoNLPy 사용 불가 시 공백 분리로 대체한다.
+    """
+    if _USE_KONLPY:
+        keep_pos = {"Noun", "Verb", "Adjective", "Adverb"}
+        return [word for word, pos in _okt.pos(text) if pos in keep_pos]
+    return [w for w in text.split() if len(w) >= 2]
+
+
+def precompute_tokens(texts: List[str], use_morphemes: bool = False) -> List[List[str]]:
+    """텍스트 목록을 토큰 목록으로 일괄 변환한다 (한 번만 호출해 재사용 권장).
+
+    use_morphemes=False: 명사만 추출
+    use_morphemes=True : 명사+동사+형용사+부사 추출
+    """
+    extractor = _extract_morphemes if use_morphemes else _extract_nouns
+    result = []
+    for text in texts:
+        tokens = [t for t in extractor(text) if t not in STOP_WORDS and len(t) >= 2]
+        result.append(tokens if tokens else ["<UNK>"])
+    return result
+
+
+def build_vocab_from_tokens(token_lists: List[List[str]], max_vocab: int) -> Dict[str, int]:
+    """사전 추출된 토큰 목록으로 단어 사전을 구성한다."""
+    counter: Counter = Counter()
+    for tokens in token_lists:
+        counter.update(tokens)
     vocab: Dict[str, int] = {"<PAD>": 0, "<UNK>": 1}
     for word, _ in counter.most_common(max_vocab - 2):
         vocab[word] = len(vocab)
     return vocab
 
 
-def texts_to_sequences(texts: List[str], vocab: Dict[str, int]) -> List[List[int]]:
-    """정제된 텍스트 목록을 정수 토큰 시퀀스로 변환한다."""
-    sequences: List[List[int]] = []
+def tokens_to_sequences(token_lists: List[List[str]], vocab: Dict[str, int]) -> List[List[int]]:
+    """사전 추출된 토큰 목록을 정수 시퀀스로 변환한다."""
     unk_id = vocab.get("<UNK>", 1)
-    for text in texts:
-        nouns = _extract_nouns(text)
-        tokens = [n for n in nouns if n not in STOP_WORDS and len(n) >= 2]
-        seq = [vocab.get(token, unk_id) for token in tokens]
+    sequences = []
+    for tokens in token_lists:
+        seq = [vocab.get(t, unk_id) for t in tokens]
         sequences.append(seq if seq else [unk_id])
     return sequences
+
+
+def build_vocab(texts: List[str], max_vocab: int) -> Dict[str, int]:
+    """정제된 텍스트 목록에서 단어 사전을 구성한다 (하위 호환 유지)."""
+    token_lists = precompute_tokens(texts, use_morphemes=False)
+    return build_vocab_from_tokens(token_lists, max_vocab)
+
+
+def texts_to_sequences(texts: List[str], vocab: Dict[str, int]) -> List[List[int]]:
+    """정제된 텍스트 목록을 정수 토큰 시퀀스로 변환한다 (하위 호환 유지)."""
+    token_lists = precompute_tokens(texts, use_morphemes=False)
+    return tokens_to_sequences(token_lists, vocab)
 
 
 def pad_sequences(sequences: List[List[int]], max_len: int) -> np.ndarray:

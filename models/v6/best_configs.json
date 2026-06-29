@@ -1,0 +1,23 @@
+{
+  "LSTM": {
+    "max_vocab": 5000,
+    "max_len": 30,
+    "embed_dim": 512,
+    "hidden_dim": 128,
+    "num_layers": 1,
+    "bidirectional": false,
+    "dropout": 0.5,
+    "batch_size": 16,
+    "epochs": 30,
+    "learning_rate": 0.0046522983873015684,
+    "test_size": 0.2,
+    "val_size": 0.2,
+    "random_state": 42,
+    "patience": 5,
+    "optimizer_name": "Adam",
+    "weight_decay": 0.00012005803411514182,
+    "model_type": "LSTM",
+    "use_morphemes": true,
+    "max_items": 300
+  }
+}

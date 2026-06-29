@@ -34,7 +34,8 @@ from app.config import Config
 from app.data import load_sample_data
 from app.model import TextLSTMClassifier, TransformerClassifier, MODEL_HF_NAME
 from app.preprocess import (
-    build_vocab, clean_text, encode_labels, pad_sequences, texts_to_sequences,
+    clean_text, encode_labels, pad_sequences,
+    precompute_tokens, build_vocab_from_tokens, tokens_to_sequences,
     get_transformer_tokenizer, tokenize_for_transformer,
 )
 from app.train import _evaluate, _train_epoch, set_seed
@@ -59,15 +60,16 @@ plt.rcParams["axes.unicode_minus"] = False
 
 # ── LSTM 탐색 공간 ─────────────────────────────────────────────────────────────
 _LSTM_SPACE = {
-    "max_vocab"    : [3000, 5000, 8000, 10000],
-    "max_len"      : [10, 15, 20, 25, 30],
-    "embed_dim"    : [64, 128, 256],
-    "hidden_dim"   : [64, 128, 256],
-    "num_layers"   : (1, 3),
+    "max_vocab"    : [5000, 8000, 10000, 15000],
+    "max_len"      : [20, 25, 30, 40, 50],        # 형태소 사용 시 더 긴 시퀀스 필요
+    "embed_dim"    : [128, 256, 512],
+    "hidden_dim"   : [128, 256, 512],
+    "num_layers"   : (1, 4),
     "bidirectional": [True, False],
+    "use_morphemes": [True, False],                # 신규: 형태소(명사+동사+형용사) vs 명사만
     "optimizer"    : ["Adam", "AdamW"],
     "weight_decay" : (1e-5, 1e-2),
-    "lr"           : (1e-4, 5e-3),  # 상한 5e-3: 클래스 붕괴 방지
+    "lr"           : (5e-5, 5e-3),
     "batch_size"   : [16, 32, 64],
 }
 
@@ -80,15 +82,17 @@ _TR_SPACE = {
 }
 
 
-TUNE_EPOCHS_LSTM = 15
+TUNE_EPOCHS_LSTM = 25   # 데이터 3배로 수렴이 느려짐 → 더 길게
 TUNE_EPOCHS_TR   = 5   # 트랜스포머는 사전학습 덕에 빠르게 수렴
-PATIENCE         = 3
+PATIENCE         = 5   # 조기 종료 완화 (데이터 많아질수록 수렴 느림)
 
 
 def objective(
     trial: optuna.Trial,
     raw_texts: List[str],
     cleaned_texts: List[str],
+    noun_tokens: List[List[str]],
+    morph_tokens: List[List[str]],
     labels: List[str],
     config_base: Config,
     tokenizer_cache: dict,
@@ -120,20 +124,22 @@ def objective(
 
     # ── LSTM 분기 ─────────────────────────────────────────────────────────────
     if model_type == "LSTM":
-        max_vocab    = trial.suggest_categorical("lstm_max_vocab",     _LSTM_SPACE["max_vocab"])
-        max_len      = trial.suggest_categorical("lstm_max_len",       _LSTM_SPACE["max_len"])
-        embed_dim    = trial.suggest_categorical("lstm_embed_dim",     _LSTM_SPACE["embed_dim"])
-        hidden_dim   = trial.suggest_categorical("lstm_hidden_dim",    _LSTM_SPACE["hidden_dim"])
-        num_layers   = trial.suggest_int("lstm_num_layers",            *_LSTM_SPACE["num_layers"])
-        bidir        = trial.suggest_categorical("lstm_bidirectional", _LSTM_SPACE["bidirectional"])
-        opt_name     = trial.suggest_categorical("lstm_optimizer",     _LSTM_SPACE["optimizer"])
-        weight_decay = trial.suggest_float("lstm_weight_decay",        *_LSTM_SPACE["weight_decay"], log=True)
-        lr           = trial.suggest_float("lstm_lr",                  *_LSTM_SPACE["lr"],           log=True)
-        batch_size   = trial.suggest_categorical("lstm_batch_size",    _LSTM_SPACE["batch_size"])
+        max_vocab     = trial.suggest_categorical("lstm_max_vocab",     _LSTM_SPACE["max_vocab"])
+        max_len       = trial.suggest_categorical("lstm_max_len",       _LSTM_SPACE["max_len"])
+        embed_dim     = trial.suggest_categorical("lstm_embed_dim",     _LSTM_SPACE["embed_dim"])
+        hidden_dim    = trial.suggest_categorical("lstm_hidden_dim",    _LSTM_SPACE["hidden_dim"])
+        num_layers    = trial.suggest_int("lstm_num_layers",            *_LSTM_SPACE["num_layers"])
+        bidir         = trial.suggest_categorical("lstm_bidirectional", _LSTM_SPACE["bidirectional"])
+        use_morph     = trial.suggest_categorical("lstm_use_morphemes", _LSTM_SPACE["use_morphemes"])
+        opt_name      = trial.suggest_categorical("lstm_optimizer",     _LSTM_SPACE["optimizer"])
+        weight_decay  = trial.suggest_float("lstm_weight_decay",        *_LSTM_SPACE["weight_decay"], log=True)
+        lr            = trial.suggest_float("lstm_lr",                  *_LSTM_SPACE["lr"],           log=True)
+        batch_size    = trial.suggest_categorical("lstm_batch_size",    _LSTM_SPACE["batch_size"])
 
-        vocab     = build_vocab(cleaned_texts, max_vocab)
-        sequences = texts_to_sequences(cleaned_texts, vocab)
-        x         = pad_sequences(sequences, max_len)
+        token_lists = morph_tokens if use_morph else noun_tokens
+        vocab       = build_vocab_from_tokens(token_lists, max_vocab)
+        sequences   = tokens_to_sequences(token_lists, vocab)
+        x           = pad_sequences(sequences, max_len)
 
         x_train = x[train_idx]; x_val = x[val_idx]
         y_train = y[train_idx]; y_val = y[val_idx]
@@ -295,17 +301,19 @@ def _params_to_config(params: dict) -> Config:
     if model_type == "LSTM":
         return Config(
             model_type     = model_type,
-            max_vocab      = params.get("lstm_max_vocab",     5000),
-            max_len        = params.get("lstm_max_len",        20),
-            embed_dim      = params.get("lstm_embed_dim",     128),
-            hidden_dim     = params.get("lstm_hidden_dim",    128),
-            num_layers     = params.get("lstm_num_layers",      2),
-            bidirectional  = params.get("lstm_bidirectional", True),
-            dropout        = params.get("dropout",            0.3),
-            optimizer_name = params.get("lstm_optimizer",   "Adam"),
-            weight_decay   = params.get("lstm_weight_decay", 0.0),
-            learning_rate  = params.get("lstm_lr",          0.001),
-            batch_size     = params.get("lstm_batch_size",    16),
+            max_vocab      = params.get("lstm_max_vocab",      5000),
+            max_len        = params.get("lstm_max_len",          20),
+            embed_dim      = params.get("lstm_embed_dim",       128),
+            hidden_dim     = params.get("lstm_hidden_dim",      128),
+            num_layers     = params.get("lstm_num_layers",        2),
+            bidirectional  = params.get("lstm_bidirectional",  True),
+            use_morphemes  = params.get("lstm_use_morphemes",  False),
+            dropout        = params.get("dropout",              0.3),
+            optimizer_name = params.get("lstm_optimizer",     "Adam"),
+            weight_decay   = params.get("lstm_weight_decay",   0.0),
+            learning_rate  = params.get("lstm_lr",            0.001),
+            batch_size     = params.get("lstm_batch_size",      16),
+            max_items      = 300,
         )
     else:
         return Config(
@@ -339,11 +347,13 @@ def run_tuning(
     print(f"{'='*60}\n")
 
     config_base   = Config()
-    raw_texts, labels = load_sample_data()
+    raw_texts, labels = load_sample_data(max_items=300)
 
     print("KoNLPy 형태소 분석 중 (LSTM trial 용, 최초 1회)...")
     cleaned_texts = [clean_text(t) for t in raw_texts]
-    print(f"전처리 완료: {len(cleaned_texts)}건\n")
+    noun_tokens   = precompute_tokens(cleaned_texts, use_morphemes=False)
+    morph_tokens  = precompute_tokens(cleaned_texts, use_morphemes=True)
+    print(f"전처리 완료: {len(cleaned_texts)}건  (명사: {sum(len(t) for t in noun_tokens)//len(noun_tokens):.0f}토큰/건 평균 | 형태소: {sum(len(t) for t in morph_tokens)//len(morph_tokens):.0f}토큰/건 평균)\n")
 
     if save_dir is None:
         save_dir = os.path.dirname(config_base.model_path)
@@ -367,7 +377,7 @@ def run_tuning(
         )
 
     study.optimize(
-        lambda trial: objective(trial, raw_texts, cleaned_texts, labels, config_base, tokenizer_cache, model_types),
+        lambda trial: objective(trial, raw_texts, cleaned_texts, noun_tokens, morph_tokens, labels, config_base, tokenizer_cache, model_types),
         n_trials=n_trials,
         show_progress_bar=True,
         callbacks=[

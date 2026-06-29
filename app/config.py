@@ -26,3 +26,5 @@ class Config:
     weight_decay    : float = 0.0       # AdamW weight decay (Adam은 0.0)
     model_type      : str   = "LSTM"    # "LSTM" | "KoBERT" | "KoELECTRA"
     model_path      : str   = str(PROJECT_ROOT / 'models' / 'naver_lstm_model.pt')
+    use_morphemes   : bool  = False     # False=명사만, True=명사+동사+형용사 (LSTM 전용)
+    max_items       : int   = 300       # 카테고리당 크롤링 최대 건수

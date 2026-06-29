@@ -41,6 +41,7 @@ from app.data import load_sample_data
 from app.model import TextLSTMClassifier, TransformerClassifier, MODEL_HF_NAME
 from app.preprocess import (
     build_vocab, clean_text, encode_labels, pad_sequences, texts_to_sequences,
+    precompute_tokens, build_vocab_from_tokens, tokens_to_sequences,
     get_transformer_tokenizer, tokenize_for_transformer,
 )
 
@@ -225,7 +226,7 @@ def train_model(config: Config):
     config.model_type 에 따라 LSTM / KoBERT / KoELECTRA 중 하나를 선택한다.
     """
     set_seed(config.random_state)
-    raw_texts, labels = load_sample_data()
+    raw_texts, labels = load_sample_data(max_items=getattr(config, "max_items", 300))
     y, label_to_id, id_to_label = encode_labels(labels)
 
     save_dir = os.path.dirname(config.model_path)
@@ -264,8 +265,10 @@ def train_model(config: Config):
 
     else:
         cleaned_texts = [clean_text(t) for t in raw_texts]
-        vocab         = build_vocab(cleaned_texts, config.max_vocab)
-        sequences     = texts_to_sequences(cleaned_texts, vocab)
+        use_morph     = getattr(config, "use_morphemes", False)
+        token_lists   = precompute_tokens(cleaned_texts, use_morphemes=use_morph)
+        vocab         = build_vocab_from_tokens(token_lists, config.max_vocab)
+        sequences     = tokens_to_sequences(token_lists, vocab)
         x             = pad_sequences(sequences, config.max_len)
 
         id_to_word = {v: k for k, v in vocab.items() if k not in ("<PAD>", "<UNK>")}
@@ -328,13 +331,17 @@ def train_model(config: Config):
     criterion = nn.CrossEntropyLoss()
 
     # ── 학습 루프 ──────────────────────────────────────────────────────────────
+    # LSTM: val_acc 기준 (손실보다 정확도가 일반화 지표로 더 적합)
+    # Transformer: val_loss 기준 (표준 파인튜닝 관행)
+    use_acc_criterion = not is_transformer
+
     train_losses, val_losses = [], []
     train_accs,   val_accs   = [], []
     lr_history               = []
-    best_val_loss            = float("inf")
-    epochs_no_improve        = 0
+    best_val_metric   = 0.0 if use_acc_criterion else float("inf")
+    epochs_no_improve = 0
 
-    print(f"\n[{config.model_type}] 학습 시작  (epochs={config.epochs})\n")
+    print(f"\n[{config.model_type}] 학습 시작  (epochs={config.epochs}, early_stop={'val_acc' if use_acc_criterion else 'val_loss'})\n")
     for epoch in range(1, config.epochs + 1):
         train_loss, train_acc = _train_epoch(
             model, train_loader, criterion, optimizer,
@@ -357,14 +364,17 @@ def train_model(config: Config):
             f"| lr: {current_lr:.2e}"
         )
 
-        if val_loss < best_val_loss:
-            best_val_loss     = val_loss
+        # 개선 여부 판단 (LSTM=acc 최대화, Transformer=loss 최소화)
+        improved = (val_acc > best_val_metric) if use_acc_criterion else (val_loss < best_val_metric)
+        if improved:
+            best_val_metric   = val_acc if use_acc_criterion else val_loss
             epochs_no_improve = 0
             torch.save(model.state_dict(), config.model_path)
         else:
             epochs_no_improve += 1
             if epochs_no_improve >= config.patience:
-                print(f"\nEarly Stopping: {epoch} 에포크에서 조기 종료 (best val_loss={best_val_loss:.4f})")
+                metric_name = f"val_acc={best_val_metric:.4f}" if use_acc_criterion else f"val_loss={best_val_metric:.4f}"
+                print(f"\nEarly Stopping: {epoch} 에포크에서 조기 종료 (best {metric_name})")
                 break
 
     # ── 최적 모델 로드 & 최종 평가 ────────────────────────────────────────────

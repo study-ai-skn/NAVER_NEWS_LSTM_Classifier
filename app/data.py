@@ -201,43 +201,43 @@ def _scrape_naver_news(sid: str, label: str, max_items: int = 100) -> List[Tuple
         return []
 
 
-def get_news_it() -> List[Tuple[str, str]]:
+def get_news_it(max_items: int = 300) -> List[Tuple[str, str]]:
     """네이버 IT/과학 카테고리 뉴스 제목을 가져온다."""
-    result = _scrape_naver_news(sid="105", label="IT")
+    result = _scrape_naver_news(sid="105", label="IT", max_items=max_items)
     return result if result else [(t, l) for t, l in SAMPLE_DATA if l == "IT"]
 
 
-def get_news_sports() -> List[Tuple[str, str]]:
+def get_news_sports(max_items: int = 300) -> List[Tuple[str, str]]:
     """네이버 스포츠 카테고리 뉴스 제목을 가져온다."""
-    result = _scrape_naver_news(sid="107", label="스포츠")
+    result = _scrape_naver_news(sid="107", label="스포츠", max_items=max_items)
     return result if result else [(t, l) for t, l in SAMPLE_DATA if l == "스포츠"]
 
 
-def get_news_entertainment() -> List[Tuple[str, str]]:
+def get_news_entertainment(max_items: int = 300) -> List[Tuple[str, str]]:
     """네이버 연예 카테고리 뉴스 제목을 가져온다."""
-    result = _scrape_naver_news(sid="106", label="연예")
+    result = _scrape_naver_news(sid="106", label="연예", max_items=max_items)
     return result if result else [(t, l) for t, l in SAMPLE_DATA if l == "연예"]
 
 
-def get_news_economy() -> List[Tuple[str, str]]:
+def get_news_economy(max_items: int = 300) -> List[Tuple[str, str]]:
     """네이버 경제 카테고리 뉴스 제목을 가져온다."""
-    result = _scrape_naver_news(sid="101", label="경제")
+    result = _scrape_naver_news(sid="101", label="경제", max_items=max_items)
     return result if result else [(t, l) for t, l in SAMPLE_DATA if l == "경제"]
 
 
-def get_news_society() -> List[Tuple[str, str]]:
+def get_news_society(max_items: int = 300) -> List[Tuple[str, str]]:
     """네이버 사회 카테고리 뉴스 제목을 가져온다."""
-    result = _scrape_naver_news(sid="102", label="사회")
+    result = _scrape_naver_news(sid="102", label="사회", max_items=max_items)
     return result if result else [(t, l) for t, l in SAMPLE_DATA if l == "사회"]
 
 
-def get_news_politics() -> List[Tuple[str, str]]:
+def get_news_politics(max_items: int = 300) -> List[Tuple[str, str]]:
     """네이버 정치 카테고리 뉴스 제목을 가져온다."""
-    result = _scrape_naver_news(sid="100", label="정치")
+    result = _scrape_naver_news(sid="100", label="정치", max_items=max_items)
     return result if result else [(t, l) for t, l in SAMPLE_DATA if l == "정치"]
 
 
-def load_sample_data() -> tuple:
+def load_sample_data(max_items: int = 300) -> tuple:
     """네이버 뉴스를 카테고리별로 크롤링해 학습 데이터를 수집한다.
     크롤링 실패 시 내장 SAMPLE_DATA 로 자동 대체한다.
     """
@@ -245,12 +245,12 @@ def load_sample_data() -> tuple:
     _sample_titles = {text for text, _ in SAMPLE_DATA}
 
     category_funcs = [
-        ("IT",   get_news_it),
-        ("스포츠", get_news_sports),
-        ("연예",  get_news_entertainment),
-        ("경제",  get_news_economy),
-        ("사회",  get_news_society),
-        ("정치",  get_news_politics),
+        ("IT",   lambda: get_news_it(max_items)),
+        ("스포츠", lambda: get_news_sports(max_items)),
+        ("연예",  lambda: get_news_entertainment(max_items)),
+        ("경제",  lambda: get_news_economy(max_items)),
+        ("사회",  lambda: get_news_society(max_items)),
+        ("정치",  lambda: get_news_politics(max_items)),
     ]
 
     all_data: List[Tuple[str, str]] = []
