@@ -1,0 +1,15 @@
+numpy>=1.26,<3
+scikit-learn>=1.4
+matplotlib>=3.8
+torch>=2.2
+konlpy>=0.6
+requests>=2.31
+beautifulsoup4>=4.12
+wordcloud>=1.9
+optuna>=3.5
+tqdm>=4.66
+notebook>=7.0
+ipykernel>=6.29
+transformers>=4.35.0
+sentencepiece>=0.1.99
+tokenizers>=0.15.0
