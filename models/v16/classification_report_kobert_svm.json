@@ -1,0 +1,65 @@
+{
+  "model": "kobert_svm",
+  "base_model": "klue/bert-base",
+  "approach": "pretrained feature extraction + LinearSVC (no fine-tuning)",
+  "accuracy": 0.775,
+  "best_C": 0.013151434878787524,
+  "report": {
+    "IT": {
+      "precision": 0.6862745098039216,
+      "recall": 0.5833333333333334,
+      "f1-score": 0.6306306306306306,
+      "support": 60.0
+    },
+    "경제": {
+      "precision": 0.6615384615384615,
+      "recall": 0.7166666666666667,
+      "f1-score": 0.688,
+      "support": 60.0
+    },
+    "사회": {
+      "precision": 0.5932203389830508,
+      "recall": 0.5833333333333334,
+      "f1-score": 0.5882352941176471,
+      "support": 60.0
+    },
+    "스포츠": {
+      "precision": 0.9666666666666667,
+      "recall": 0.9666666666666667,
+      "f1-score": 0.9666666666666667,
+      "support": 60.0
+    },
+    "연예": {
+      "precision": 0.9344262295081968,
+      "recall": 0.95,
+      "f1-score": 0.9421487603305785,
+      "support": 60.0
+    },
+    "정치": {
+      "precision": 0.796875,
+      "recall": 0.85,
+      "f1-score": 0.8225806451612904,
+      "support": 60.0
+    },
+    "accuracy": 0.775,
+    "macro avg": {
+      "precision": 0.7731668677500495,
+      "recall": 0.7749999999999999,
+      "f1-score": 0.7730436661511355,
+      "support": 360.0
+    },
+    "weighted avg": {
+      "precision": 0.7731668677500495,
+      "recall": 0.775,
+      "f1-score": 0.7730436661511356,
+      "support": 360.0
+    }
+  },
+  "timing": {
+    "embedding_sec": 85.91,
+    "tuning_sec": 79.67,
+    "final_train_sec": 0.77,
+    "total_sec": 166.35,
+    "total_min": 2.77
+  }
+}

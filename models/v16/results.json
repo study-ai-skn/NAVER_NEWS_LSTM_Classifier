@@ -1,0 +1,26 @@
+{
+  "version": "v16",
+  "approach": "pretrained transformer embedding + LinearSVC",
+  "data": "data/naver_news_300per_cat.csv",
+  "results": {
+    "kobert_svm": 0.775,
+    "koelectra_svm": 0.6305555555555555
+  },
+  "timing": {
+    "kobert_svm": {
+      "embedding_sec": 85.91,
+      "tuning_sec": 79.67,
+      "final_train_sec": 0.77,
+      "total_sec": 166.35,
+      "total_min": 2.77
+    },
+    "koelectra_svm": {
+      "embedding_sec": 80.75,
+      "tuning_sec": 105.32,
+      "final_train_sec": 2.74,
+      "total_sec": 188.81,
+      "total_min": 3.15
+    },
+    "total_script_min": 5.92
+  }
+}
