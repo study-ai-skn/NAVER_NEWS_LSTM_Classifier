@@ -1,0 +1,79 @@
+{
+  "tfidf_svm": {
+    "max_features": 20000,
+    "ngram_range": [
+      1,
+      2
+    ],
+    "sublinear_tf": false,
+    "min_df": 1,
+    "C": 0.10659318318043445,
+    "model": "LinearSVC",
+    "cv_best_acc": 0.7369791666666666,
+    "timing": {
+      "tokenization_sec": 7.18,
+      "tuning_sec": 8.35,
+      "tuning_min": 0.14,
+      "final_train_sec": 0.07,
+      "inference_sec": 0.0077,
+      "total_sec": 8.42,
+      "total_min": 0.14
+    }
+  },
+  "tfidf_lgbm": {
+    "max_features": 10000,
+    "ngram_range": [
+      1,
+      1
+    ],
+    "n_estimators": 100,
+    "max_depth": 7,
+    "learning_rate": 0.06323430890983159,
+    "num_leaves": 44,
+    "min_child_samples": 10,
+    "model": "LightGBM",
+    "cv_best_acc": 0.5755208333333334,
+    "timing": {
+      "tokenization_sec": 7.18,
+      "tuning_sec": 39.82,
+      "tuning_min": 0.66,
+      "final_train_sec": 0.35,
+      "inference_sec": 0.0366,
+      "total_sec": 40.16,
+      "total_min": 0.67
+    }
+  },
+  "lda_svm": {
+    "max_features": 10000,
+    "min_df": 3,
+    "n_components": 57,
+    "C": 37.95853142670641,
+    "model": "LDA+LinearSVC",
+    "cv_best_acc": 0.540625,
+    "timing": {
+      "tokenization_sec": 7.18,
+      "tuning_sec": 170.6,
+      "tuning_min": 2.84,
+      "final_train_sec": 2.88,
+      "inference_sec": 0.0252,
+      "total_sec": 173.47,
+      "total_min": 2.89
+    }
+  },
+  "lsa_svm": {
+    "max_features": 10000,
+    "n_components": 400,
+    "C": 6.971753655503662,
+    "model": "LSA+LinearSVC",
+    "cv_best_acc": 0.7317708333333334,
+    "timing": {
+      "tokenization_sec": 7.18,
+      "tuning_sec": 427.53,
+      "tuning_min": 7.13,
+      "final_train_sec": 9.1,
+      "inference_sec": 0.0214,
+      "total_sec": 436.63,
+      "total_min": 7.28
+    }
+  }
+}

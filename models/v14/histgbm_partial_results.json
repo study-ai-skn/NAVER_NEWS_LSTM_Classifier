@@ -1,0 +1,13 @@
+{
+  "model": "TF-IDF + HistGradientBoostingClassifier (sklearn)",
+  "status": "interrupted",
+  "trials_completed": 11,
+  "trials_planned": 30,
+  "best_cv_val_acc": 0.6089,
+  "elapsed_minutes": 57,
+  "avg_seconds_per_trial": 311,
+  "estimated_total_hours": 3.1,
+  "reason": "HistGBM requires dense matrix (.toarray()) - 20k TF-IDF features x 3-fold CV x 400 trees = too slow",
+  "replaced_by": "LightGBM (native sparse support, ~10x faster)",
+  "note": "Best CV 0.6089 at trial 11/30 - accuracy well below TF-IDF+SVM (76%) even incomplete"
+}

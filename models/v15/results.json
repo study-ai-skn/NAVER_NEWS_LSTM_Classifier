@@ -1,0 +1,57 @@
+{
+  "version": "v15",
+  "data": "data/naver_news_500per_cat.csv",
+  "train_size": 1920,
+  "val_size": 480,
+  "test_size": 600,
+  "random_state": 42,
+  "n_trials": 30,
+  "results": {
+    "tfidf_svm": 0.76,
+    "tfidf_lgbm": 0.6433333333333333,
+    "lda_svm": 0.535,
+    "lsa_svm": 0.755
+  },
+  "timing": {
+    "tfidf_svm": {
+      "tokenization_sec": 7.18,
+      "tuning_sec": 8.35,
+      "tuning_min": 0.14,
+      "final_train_sec": 0.07,
+      "inference_sec": 0.0077,
+      "total_sec": 8.42,
+      "total_min": 0.14
+    },
+    "tfidf_lgbm": {
+      "tokenization_sec": 7.18,
+      "tuning_sec": 39.82,
+      "tuning_min": 0.66,
+      "final_train_sec": 0.35,
+      "inference_sec": 0.0366,
+      "total_sec": 40.16,
+      "total_min": 0.67
+    },
+    "lda_svm": {
+      "tokenization_sec": 7.18,
+      "tuning_sec": 170.6,
+      "tuning_min": 2.84,
+      "final_train_sec": 2.88,
+      "inference_sec": 0.0252,
+      "total_sec": 173.47,
+      "total_min": 2.89
+    },
+    "lsa_svm": {
+      "tokenization_sec": 7.18,
+      "tuning_sec": 427.53,
+      "tuning_min": 7.13,
+      "final_train_sec": 9.1,
+      "inference_sec": 0.0214,
+      "total_sec": 436.63,
+      "total_min": 7.28
+    },
+    "tokenization_sec": 7.18,
+    "total_script_sec": 666.23,
+    "total_script_min": 11.1
+  },
+  "histgbm_reference": "models/v14/histgbm_partial_results.json"
+}

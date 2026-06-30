@@ -1,0 +1,65 @@
+{
+  "model": "lsa_svm",
+  "accuracy": 0.755,
+  "report": {
+    "IT": {
+      "precision": 0.8,
+      "recall": 0.72,
+      "f1-score": 0.7578947368421053,
+      "support": 100.0
+    },
+    "경제": {
+      "precision": 0.6976744186046512,
+      "recall": 0.6,
+      "f1-score": 0.6451612903225806,
+      "support": 100.0
+    },
+    "사회": {
+      "precision": 0.5648148148148148,
+      "recall": 0.61,
+      "f1-score": 0.5865384615384616,
+      "support": 100.0
+    },
+    "스포츠": {
+      "precision": 0.8411214953271028,
+      "recall": 0.9,
+      "f1-score": 0.8695652173913043,
+      "support": 100.0
+    },
+    "연예": {
+      "precision": 0.7719298245614035,
+      "recall": 0.88,
+      "f1-score": 0.822429906542056,
+      "support": 100.0
+    },
+    "정치": {
+      "precision": 0.8631578947368421,
+      "recall": 0.82,
+      "f1-score": 0.841025641025641,
+      "support": 100.0
+    },
+    "accuracy": 0.755,
+    "macro avg": {
+      "precision": 0.7564497413408025,
+      "recall": 0.7549999999999999,
+      "f1-score": 0.7537692089436915,
+      "support": 600.0
+    },
+    "weighted avg": {
+      "precision": 0.7564497413408023,
+      "recall": 0.755,
+      "f1-score": 0.7537692089436915,
+      "support": 600.0
+    }
+  },
+  "timing": {
+    "tokenization_sec": 7.18,
+    "tuning_sec": 427.53,
+    "tuning_min": 7.13,
+    "final_train_sec": 9.1,
+    "inference_sec": 0.0214,
+    "total_sec": 436.63,
+    "total_min": 7.28
+  },
+  "note": "TF-IDF 희소 벡터를 SVD로 차원 축소 후 SVM. 정보 손실 발생."
+}
