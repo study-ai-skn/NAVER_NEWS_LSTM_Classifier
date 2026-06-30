@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+import csv
+import os
+from pathlib import Path
 from typing import List, Tuple
+
+_DATA_DIR = Path(__file__).parent.parent / "data"
+_DATA_DIR.mkdir(exist_ok=True)
 
 
 # 네이버 뉴스 카테고리별 샘플 뉴스 제목을 내장했다.
@@ -237,11 +243,50 @@ def get_news_politics(max_items: int = 300) -> List[Tuple[str, str]]:
     return result if result else [(t, l) for t, l in SAMPLE_DATA if l == "정치"]
 
 
+def _cache_path(max_items: int) -> Path:
+    return _DATA_DIR / f"naver_news_{max_items}per_cat.csv"
+
+
+def _save_cache(data: List[Tuple[str, str]], max_items: int) -> None:
+    path = _cache_path(max_items)
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["text", "label"])
+        writer.writerows(data)
+    print(f"  [캐시 저장] {path}  ({len(data)}건)")
+
+
+def _load_cache(max_items: int) -> List[Tuple[str, str]] | None:
+    path = _cache_path(max_items)
+    if not path.exists():
+        return None
+    with open(path, encoding="utf-8", newline="") as f:
+        reader = csv.reader(f)
+        next(reader)  # 헤더 스킵
+        data = [(row[0], row[1]) for row in reader if len(row) == 2]
+    return data if data else None
+
+
 def load_sample_data(max_items: int = 300) -> tuple:
     """네이버 뉴스를 카테고리별로 크롤링해 학습 데이터를 수집한다.
+    data/ 폴더에 캐시가 있으면 재크롤링 없이 즉시 로드한다.
     크롤링 실패 시 내장 SAMPLE_DATA 로 자동 대체한다.
     """
-    # 내장 샘플 제목 집합 (크롤링 여부 판별용)
+    # ── 캐시 확인 ────────────────────────────────────────────────────────
+    cached = _load_cache(max_items)
+    if cached:
+        print(f"[ 데이터 로드 - 캐시 사용 ] {_cache_path(max_items)}")
+        cats: dict = {}
+        for _, lbl in cached:
+            cats[lbl] = cats.get(lbl, 0) + 1
+        for lbl, cnt in sorted(cats.items()):
+            print(f"  {lbl:6s}: {cnt:3d}건")
+        print(f"  총합: {len(cached)}건\n")
+        texts  = [t for t, _ in cached]
+        labels = [l for _, l in cached]
+        return texts, labels
+
+    # ── 신규 크롤링 ──────────────────────────────────────────────────────
     _sample_titles = {text for text, _ in SAMPLE_DATA}
 
     category_funcs = [
@@ -254,7 +299,7 @@ def load_sample_data(max_items: int = 300) -> tuple:
     ]
 
     all_data: List[Tuple[str, str]] = []
-    print("[ 데이터 수집 ]")
+    print("[ 데이터 수집 - 크롤링 ]")
     for label_name, func in category_funcs:
         items = func()
         crawled = sum(1 for t, _ in items if t not in _sample_titles)
@@ -262,7 +307,9 @@ def load_sample_data(max_items: int = 300) -> tuple:
         print(f"  {label_name:6s}: {len(items):3d}건  ({source})")
         all_data.extend(items)
 
-    print(f"  총합: {len(all_data)}건\n")
+    print(f"  총합: {len(all_data)}건")
+    _save_cache(all_data, max_items)
+    print()
 
     texts  = [text  for text, _     in all_data]
     labels = [label for _,    label in all_data]
